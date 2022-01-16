@@ -14,9 +14,6 @@ import numpy as np
 import math
 from scipy.fft import fft
 
-# Metadata
-df_info = pd.read_csv("UrbanSound8K.csv")
-
 print(df_info['class'].value_counts())
 
 
@@ -89,25 +86,73 @@ plt.colorbar()
 plt.title('MFCCs')
 
 
+# Ekstrakcja dla katalogów fold 1 - 10
+
+# Metadata
+df_info = pd.read_csv("UrbanSound8K.csv")
+
+
 dict_list = []
 
+# Iteracja po wszystkich foldach (katalogi)
+for fold in range(1, 11):
+    # Iteracja po plikach wewnątrz katalogów (fold)
+    for filename in os.listdir('fold'+str(fold)):
+        # Wczytaj dźwięk z librosa
+        y, sr = librosa.load(('fold'+str(fold)+'\\'+filename), sr = 44100, mono = True)
 
+        # Słownik na dane
+        data_dict = {}
+        
+        # ZCR
+        zcr = librosa.feature.zero_crossing_rate(y+0.01)
+        zcrAvg = np.sum(zcr) / zcr.shape[1]
+        
+        data_dict['zcrAvg'] = zcrAvg
+        
+        # Change sign sum
+        changeSignArray = librosa.zero_crossings(y+0.01)
+        changeSign = np.sum(changeSignArray)
+        
+        data_dict['changeSign'] = changeSign
+        
+        # Energia
+        hop_length = 1
+        frame_length = 1
+        
+        energy = np.array([
+            sum(abs(y[i:i+frame_length]**2))
+            for i in range(0, len(y), hop_length)
+        ])
+        energyValue = sum(energy)
+        
+        data_dict['energyValue'] = energyValue
+        
+        # Root-mean-square energy (RMSE) - wartosc 
+        rmseValue = math.sqrt(np.mean(y*y))
+        
+        # Centroid
+        cent = librosa.feature.spectral_centroid(y=y, sr=sr)
+        centAvg = cent.sum()/ cent.shape[1]
+        
+        data_dict['centAvg'] = centAvg
+        
+        # MFCC
+        mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=40)
+        mfccsAvg = {'mfcc'+str(idx+1): np.average(mfcc) for idx, mfcc in enumerate(mfccs)}
 
+        data_dict = {**data_dict, **mfccsAvg}
+        
+        # Klasy
+        data_dict['class'] = df_info[df_info['slice_file_name'] == filename]['classID'].values[0]      
+        
+        dict_list.append(data_dict)
+        
+        print("Fold %d, %s" % (fold, filename))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Zapis do csv
+df = pd.DataFrame(dict_list)
+df.to_csv('sound_features_upd.csv', sep=';')
 
 
 
