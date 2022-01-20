@@ -133,6 +133,57 @@ def extended_features():
     df = pd.DataFrame(dict_list)
     df.to_csv(r'csv\sound_features_upd_delta_mfccs.csv', sep=';')
 
+def extended_features_part_2():
+    ''' additional function to extract features from audio files
+
+        save all values to CSV files
+    '''
+
+    dict_list = []
+    numer =1
+    # iteration over all dictionary
+    for fold in range(1, 11):
+        # iteration over all files in dictionary (fold)
+        for filename in os.listdir(r'archive\fold'+str(fold)):
+            # load sound by librosa
+            y, sr = librosa.load((r'archive\fold'+str(fold)+'\\'+filename), sr = 44100, mono = True)
+
+            # empty dictionary
+            data_dict = {}
+            try:
+                #spectral_flux
+                tempo_y,_= librosa.beat.beat_track(y, sr=sr)
+                data_dict['spectral_flux'] = tempo_y
+
+                ###spectral_flux
+                onset_env = librosa.onset.onset_strength(y, sr=sr)
+                onset_env = np.mean(onset_env)
+                data_dict['spectral_flux'] = onset_env
+
+                # Spectral Bandwidth
+                spectral_bandwidth_2 = librosa.feature.spectral_bandwidth(y, sr=sr)[0]
+                spectral_bandwidth_3 = librosa.feature.spectral_bandwidth(y, sr=sr, p=3)[0]
+                spectral_bandwidth_4 = librosa.feature.spectral_bandwidth(y, sr=sr, p=4)[0]
+                data_dict['spectral_bandwidth_2'] = np.mean(spectral_bandwidth_2)
+                data_dict['spectral_bandwidth_3'] = np.mean(spectral_bandwidth_3)
+                data_dict['spectral_bandwidth_4'] = np.mean(spectral_bandwidth_4)
+
+
+                print("%r, Fold %d, %s" % (numer,fold, filename))
+                numer +=1
+            except:
+                print('fail')
+                data_dict['0'] = 'error'
+
+
+            # classes
+            data_dict['class'] = df_info[df_info['slice_file_name'] == filename]['classID'].values[0]
+            dict_list.append(data_dict)
+
+    # save to  csv
+    df = pd.DataFrame(dict_list)
+    df.to_csv(r'csv\sound_features_extended_part_2.csv', sep=';')
+
 def clean_data():
     ''' function to clean and convert data
 
@@ -146,8 +197,12 @@ def clean_data():
     path = r'csv\sound_features_extended.csv'
     df_feature_ext = pd.read_csv(path, sep=';',index_col=0)
 
+    # Extended features r02
+    path = r'csv\sound_features_extended_part_2.csv'
+    df_feature_ext_part_2 = pd.read_csv(path, sep=';',index_col=0)
+
     # Combine two dataframes
-    df_all=[df_feature,df_feature_ext]
+    df_all=[df_feature,df_feature_ext,df_feature_ext_part_2]
     df_new = pd.concat(df_all,axis=1)
 
     # remove empty rows
@@ -168,7 +223,9 @@ def clean_data():
 
 
 
+
 base_features()
 extended_features()
+extended_features_part_2()
 clean_data()
 
